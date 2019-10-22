@@ -4,6 +4,37 @@ This is the pytorch implementation of our paper "MetaPruning: Meta Learning for 
 
 <img width=60% src="https://github.com/liuzechun0216/images/blob/master/figure1.jpg"/>
 
+在网络模型压缩中，channel pruning是一种十分有效的压缩方式。比较常见的剪枝pipeline是：训练一个完整模型 -> 减掉冗余的部分 -> finetune或retrain压缩的模型。
+
+在以往的方法中，channel pruning大多是data-driven的稀疏化或者人工设计规则来选择保留哪些channel，减掉哪些channel；而最近有很多AutoML风格的剪枝方式，通过一些反馈机制或利用强化学习来自动的进行剪枝。
+
+同时，以往的方法通常会保留之前完整模型中的参数；而最近也有一些研究表明，剪枝之后模型的性能，并不是由这些继承来的参数决定的，而是由结构本身决定的。
+
+结合以上观点，本文提出了一种meta learning的方法——MetaPruning，利用meta learning训练一个Pruning Network用来生成压缩网络的参数，而不是继承或者重新训练。
+
+它提出一种用于通道剪裁的元学习方法——MetaPruning，其核心是最前沿的AutoML 算法，旨在打破传统通道剪裁需人工设定每层剪裁比例，再算法迭代决定裁剪哪些通道的过程，直接搜索最优的已剪裁网络各层通道数。它的主要算法是通过学习一个元网络 PruningNet，为不同的剪裁结构生成权重，极大程度加速最优剪裁网络的搜索过程。
+
+通道剪裁（Channel Pruning）作为一种神经网络压缩/加速方法，其有效性已深获认可，并广泛应用于工业界。
+
+一个经典的剪裁方法包含三步：1）训练一个参数过多的大型网络；2）剪裁较不重要的权重或通道；3）微调或再训练已剪裁的网络。其中第二个阶段是关键，它通常借助迭代式逐层剪裁、快速微调或者权重重建以保持精度。
+
+卷积通道剪裁方法主要依赖于数据驱动的稀疏约束（sparsity constraints）或者人工设计的策略。最近，一些基于反馈闭环或者强化学习的 AutoML 方法可自动剪裁一个迭代模型中的通道。
+
+相较于传统剪裁方法， AutoML 方法不仅可以节省人力，还可以帮助人们在不用知道硬件底层实现的情况下，直接为特定硬件定制化设计在满足该硬件上速度限制的最优网络结构。
+
+MetaPruning 作为利用 AutoML 进行网络裁剪的算法之一，有着 AutoML 所共有的省时省力，硬件定制等诸多优势，同时也创新性地加入了先前 AutoML pruning 所不具备的功能，如轻松裁剪 shortcut 中的通道。
+
+过去的研究往往通过逐层裁剪一个已训练好模型中带有不重要权重的通道来达到裁剪的目的。而一项最新研究发现，不管继不继承原始网络的权重，已剪裁的网络都可获得相同精度。
+
+这一发现表明，通道剪裁的本质是决定逐层的通道数量。基于这个，MetaPruning 跳过选择剪裁哪些通道，而直接决定每层剪裁多少通道——好的剪裁结构。
+
+然而，可能的每层通道数组合数巨大，暴力寻找最优的剪裁结构是计算量所不支的。
+
+受到近期的神经网络架构搜索（NAS）的启发，尤其是 One-Shot 模型，以及 HyperNetwork 中的权重预测机制，旷视研究院提出训练一个 PruningNet，它可生成所有候选的已剪裁网络结构的权重，从而仅仅评估其在验证集上的精度，即可搜索表现良好的结构。这极其有效。
+
+PruningNet 的训练采用随机采样网络结构策略，如图 1 所示，它为带有相应网络编码向量（其数量等于每一层的通道数量）的已剪裁网络生成权重。通过在网络编码向量中的随机输入，PruningNet 逐渐学习为不同的已剪裁结构生成权重。
+
+
 Traditional pruning decides pruning which channel in each layer and pays human effort in setting the pruning ratio of each layer. MetaPruning can automatically search for the best pruning ratio of each layer (i.e., number of channels in each layer). 
 
 MetaPruning contains two steps: 
